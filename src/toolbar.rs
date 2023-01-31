@@ -1,6 +1,9 @@
-use gtk::{ContainerExt, SeparatorToolItem, ToolButton, Toolbar};
+use gtk::{ContainerExt, SeparatorToolItem, ToolButton, ToolButtonExt, Toolbar, WidgetExt};
+
+use App;
 
 const PLAY_STOCK: &str = "gtk-media-play";
+const PAUSE_STOCK: &str = "gtk-media-pause";
 
 pub struct MusicToolbar {
     open_button: ToolButton,
@@ -49,5 +52,25 @@ impl MusicToolbar {
 
     pub fn toolbar(&self) -> &Toolbar {
         &self.toolbar
+    }
+}
+
+impl App {
+    pub fn connect_toolbar_events(&self) {
+        let window = self.window.clone();
+
+        self.toolbar.quit_button.connect_clicked(move |_| {
+            window.destroy();
+        });
+
+        // Cloning GTK+ widget only clones a pointer
+        let play_button = self.toolbar.play_button.clone();
+        self.toolbar.play_button.connect_clicked(move |_| {
+            if play_button.get_stock_id() == Some(PLAY_STOCK.to_string()) {
+                play_button.set_stock_id(PAUSE_STOCK);
+            } else {
+                play_button.set_stock_id(PLAY_STOCK);
+            }
+        });
     }
 }

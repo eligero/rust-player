@@ -27,6 +27,7 @@ impl App {
         let app = App { toolbar, window };
 
         app.connect_events();
+        app.connect_toolbar_events();
 
         app
     }
