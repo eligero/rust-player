@@ -1,12 +1,13 @@
 use gtk::{
     ApplicationWindow, ContainerExt, DialogExt, FileChooserAction, FileChooserDialog,
-    FileChooserExt, FileFilter, FileFilterExt, SeparatorToolItem, ToolButton, ToolButtonExt,
-    Toolbar, WidgetExt,
+    FileChooserExt, FileFilter, FileFilterExt, Image, ImageExt, SeparatorToolItem, ToolButton,
+    ToolButtonExt, Toolbar, WidgetExt,
 };
 
 use gtk_sys::{GTK_RESPONSE_ACCEPT, GTK_RESPONSE_CANCEL};
 use std::path::PathBuf;
 
+use playlist::Playlist;
 use App;
 
 const PLAY_STOCK: &str = "gtk-media-play";
@@ -73,9 +74,12 @@ impl App {
 
         // Cloning GTK+ widget only clones a pointer
         let play_button = self.toolbar.play_button.clone();
+        let playlist = self.playlist.clone();
+        let cover = self.cover.clone();
         self.toolbar.play_button.connect_clicked(move |_| {
             if play_button.get_stock_id() == Some(PLAY_STOCK.to_string()) {
                 play_button.set_stock_id(PAUSE_STOCK);
+                set_cover(&cover, &playlist);
             } else {
                 play_button.set_stock_id(PLAY_STOCK);
             }
@@ -120,4 +124,9 @@ fn show_open_dialog(parent: &ApplicationWindow) -> Option<PathBuf> {
     }
     dialog.destroy();
     file
+}
+
+fn set_cover(cover: &Image, playlist: &Playlist) {
+    cover.set_from_pixbuf(playlist.pixbuf().as_ref());
+    cover.show();
 }

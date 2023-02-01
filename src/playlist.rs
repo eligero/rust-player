@@ -118,6 +118,15 @@ impl Playlist {
         }
     }
 
+    pub fn pixbuf(&self) -> Option<Pixbuf> {
+        let selection = self.treeview.get_selection();
+        if let Some((_, iter)) = selection.get_selected() {
+            let value = self.model.get_value(&iter, PIXBUF_COLUMN as i32);
+            return value.get::<Pixbuf>();
+        }
+        None
+    }
+
     fn create_columns(treeview: &TreeView) {
         Self::add_pixbuf_column(treeview, THUMBNAIL_COLUMN as i32, Visible);
         Self::add_text_column(treeview, "Title", TITLE_COLUMN as i32);
