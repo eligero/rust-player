@@ -1,7 +1,8 @@
 extern crate gdk_pixbuf; // Show and manipulate images
 extern crate gio;
 extern crate gtk;
-extern crate id3; // Metadata from MP3 files
+extern crate gtk_sys;
+extern crate id3; // Metadata from MP3 files // MP3 files
 
 mod playlist;
 mod toolbar;
@@ -18,12 +19,14 @@ use std::env;
 use playlist::Playlist;
 use toolbar::MusicToolbar;
 
+use std::rc::Rc;
+
 struct App {
     toolbar: MusicToolbar,
     window: ApplicationWindow,
     cover: Image,
     adjustment: Adjustment,
-    playlist: Playlist,
+    playlist: Rc<Playlist>, // Reference counting pointer
 }
 
 impl App {
@@ -38,11 +41,11 @@ impl App {
         let toolbar = MusicToolbar::new();
         vbox.add(toolbar.toolbar());
 
-        let playlist = Playlist::new();
+        let playlist = Rc::new(Playlist::new());
         vbox.add(playlist.view());
 
         let cover = Image::new();
-        cover.set_from_file("cover.jpg"); // file in project directory
+
         vbox.add(&cover);
 
         // cursor widget. For now, hardcoded values for adjustment

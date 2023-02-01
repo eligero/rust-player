@@ -21,3 +21,6 @@ Cargo.lock
 
 # Images
 *.jpg
+
+# MP3 files
+*.mp3
