@@ -1,15 +1,15 @@
+extern crate crossbeam;
 extern crate gdk_pixbuf; // Show and manipulate images
 extern crate gio;
 extern crate gtk;
 extern crate gtk_sys;
 extern crate id3; // Metadata from MP3 files
-extern crate crossbeam;
 extern crate pulse_simple;
 extern crate simplemad;
 
+mod mp3;
 mod playlist;
 mod toolbar;
-mod mp3;
 
 use gtk::{
     Adjustment, Application, ApplicationWindow, ContainerExt, GtkWindowExt, Image, ImageExt, Scale,
@@ -24,6 +24,7 @@ use playlist::Playlist;
 use toolbar::MusicToolbar;
 
 use std::rc::Rc;
+use std::time::Duration;
 
 struct App {
     toolbar: MusicToolbar,
@@ -89,4 +90,8 @@ fn main() {
 
     application.connect_activate(|_| {});
     application.run(&env::args().collect::<Vec<_>>());
+}
+
+fn to_millis(duration: Duration) -> u64 {
+    duration.as_secs() * 1000 + duration.subsec_nanos() as u64 / 1_000_000
 }
