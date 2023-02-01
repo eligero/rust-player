@@ -2,10 +2,14 @@ extern crate gdk_pixbuf; // Show and manipulate images
 extern crate gio;
 extern crate gtk;
 extern crate gtk_sys;
-extern crate id3; // Metadata from MP3 files // MP3 files
+extern crate id3; // Metadata from MP3 files
+extern crate crossbeam;
+extern crate pulse_simple;
+extern crate simplemad;
 
 mod playlist;
 mod toolbar;
+mod mp3;
 
 use gtk::{
     Adjustment, Application, ApplicationWindow, ContainerExt, GtkWindowExt, Image, ImageExt, Scale,
