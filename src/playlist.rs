@@ -111,6 +111,13 @@ impl Playlist {
         &self.treeview
     }
 
+    pub fn remove_selection(&self) {
+        let selection = self.treeview.get_selection();
+        if let Some((_, iter)) = selection.get_selected() {
+            self.model.remove(&iter);
+        }
+    }
+
     fn create_columns(treeview: &TreeView) {
         Self::add_pixbuf_column(treeview, THUMBNAIL_COLUMN as i32, Visible);
         Self::add_text_column(treeview, "Title", TITLE_COLUMN as i32);
