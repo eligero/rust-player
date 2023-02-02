@@ -28,6 +28,39 @@ fn next_frame<R: Read>(decoder: &mut simplemad::Decoder<R>) -> simplemad::Frame 
         })
 }
 
+fn next_sample<R: Read>(decoder: &mut Mp3Decoder<R>) -> Option<i16> {
+    if decoder.current_frame.samples[0].len() == 0 {
+        return None;
+    }
+
+    // Getting the sample and converting it form fixed step to i16
+    let sample = decoder.current_frame.samples[decoder.current_frame_channel][decoder.current_frame_sample_pos];
+    let sample = sample.to_i32() + (1 << (28 - 16));
+    let sample = if sample >= 0x10000000 {0x10000000 - 1} else if sample < 0x10000000 {-0x10000000} else {sample};
+    let sample = sample >> (28 + 1 - 16);
+    let sample = sample as i16;
+
+    decoder.current_frame_channel += 1;
+
+    if decoder.current_frame_channel < decoder.current_frame.samples.len() {
+        return Some(sample);
+    }
+
+    decoder.current_frame_channel = 0;
+    decoder.current_frame_sample_pos += 1;
+
+    if decoder.current_frame_sample_pos < decoder.current_frame.samples[0].len(){
+        return Some(sample);
+    }
+    
+    decoder.current_frame = next_frame(&mut decoder.reader);
+    decoder.current_frame_channel = 0;
+    decoder.current_frame_sample_pos = 0;
+    decoder.current_time += to_millis(decoder.current_frame.duration);
+
+    return Some(sample);
+}
+
 pub struct Mp3Decoder<R>
 where
     R: Read,
@@ -84,5 +117,17 @@ where
                 })
                 .sum(),
         )
+    }
+}
+
+impl<R> Iterator for Mp3Decoder<R> where R: Read {
+    type Item = i16;
+
+    fn next(&mut self) -> Option<i16> {
+        next_sample(self)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.current_frame.samples[0].len(), None)
     }
 }
