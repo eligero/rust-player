@@ -24,3 +24,6 @@ Cargo.lock
 
 # MP3 files
 *.mp3
+
+# Assets
+assets/*

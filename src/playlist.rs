@@ -11,6 +11,14 @@ use gtk::{
 use self::Visibility::*;
 use std::path::Path;
 
+use player::Player;
+use std::cell::RefCell;
+use std::cmp::max;
+use std::sync::{Arc, Mutex};
+use std::thread;
+use to_millis;
+use State;
+
 #[derive(PartialEq)]
 enum Visibility {
     Invisible,
@@ -33,12 +41,15 @@ const THUMBNAIL_SIZE: i32 = 64;
 const INTERP_HYPER: InterpType = 3;
 
 pub struct Playlist {
+    current_song: RefCell<Option<String>>,
     model: ListStore,
+    player: Player,
+    state: Arc<Mutex<State>>,
     treeview: TreeView,
 }
 
 impl Playlist {
-    pub fn new() -> Self {
+    pub(crate) fn new(state: Arc<Mutex<State>>) -> Self {
         let model = ListStore::new(&[
             Pixbuf::static_type(), // Thumbnail
             Type::String,          // Metadata
@@ -58,11 +69,18 @@ impl Playlist {
         // Create columns shown in this view
         Self::create_columns(&treeview);
 
-        Playlist { model, treeview }
+        Playlist {
+            current_song: RefCell::new(None),
+            model,
+            player: Player::new(state.clone()),
+            state,
+            treeview,
+        }
     }
 
     // Add Metadata from MP3 file
     pub fn add(&self, path: &Path) {
+        self.compute_duration(path);
         let filename = path
             .file_stem()
             .unwrap_or_default()
@@ -127,6 +145,70 @@ impl Playlist {
         None
     }
 
+    pub fn play(&self) -> bool {
+        if let Some(path) = self.selected_path() {
+            if self.player.is_paused() && Some(&path) == self.path().as_ref() {
+                self.player.resume();
+            } else {
+                self.player.load(&path);
+                *self.current_song.borrow_mut() = Some(path.into());
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn pause(&self) {
+        self.player.pause();
+    }
+
+    pub fn path(&self) -> Option<String> {
+        self.current_song.borrow().clone()
+    }
+
+    pub fn stop(&self) {
+        *self.current_song.borrow_mut() = None;
+        self.player.stop();
+    }
+
+    pub fn next(&self) -> bool {
+        let selection = self.treeview.get_selection();
+        let next_iter = if let Some((_, iter)) = selection.get_selected() {
+            if !self.model.iter_next(&iter) {
+                return false;
+            }
+            Some(iter)
+        } else {
+            self.model.get_iter_first()
+        };
+
+        if let Some(ref iter) = next_iter {
+            selection.select_iter(iter);
+            self.play();
+        }
+        next_iter.is_some()
+    }
+
+    pub fn previous(&self) -> bool {
+        let selection = self.treeview.get_selection();
+        let previous_iter = if let Some((_, iter)) = selection.get_selected() {
+            if !self.model.iter_previous(&iter) {
+                return false;
+            }
+            Some(iter)
+        } else {
+            self.model
+                .iter_nth_child(None, max(0, self.model.iter_n_children(None) - 1))
+        };
+
+        if let Some(ref iter) = previous_iter {
+            selection.select_iter(iter);
+            self.play();
+        }
+        previous_iter.is_some()
+    }
+
     fn create_columns(treeview: &TreeView) {
         Self::add_pixbuf_column(treeview, THUMBNAIL_COLUMN as i32, Visible);
         Self::add_text_column(treeview, "Title", TITLE_COLUMN as i32);
@@ -176,5 +258,26 @@ impl Playlist {
             }
             pixbuf_loader.close().unwrap();
         }
+    }
+
+    fn selected_path(&self) -> Option<String> {
+        let selection = self.treeview.get_selection();
+        if let Some((_, iter)) = selection.get_selected() {
+            let value = self.model.get_value(&iter, PATH_COLUMN as i32);
+            return value.get::<String>();
+        }
+        None
+    }
+
+    fn compute_duration(&self, path: &Path) {
+        let state = self.state.clone();
+        let path = path.to_string_lossy().to_string();
+
+        thread::spawn(move || {
+            if let Some(duration) = Player::compute_duration(&path) {
+                let mut state = state.lock().unwrap();
+                state.durations.insert(path, to_millis(duration));
+            }
+        });
     }
 }
